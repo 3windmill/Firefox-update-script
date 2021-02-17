@@ -1,0 +1,244 @@
+
+#!/bin/bash
+
+txtylw=$(tput setaf 150) # Yellow
+txtred=$(tput setaf 1) # Red
+txtrst=$(tput sgr0) # Text reset
+
+Application="QuantumFirefox"
+#Application="Firefox"
+ApplicationBinary="firefox"
+ApplicationZip=$Application"Setup.zip"
+ApplicationZipExtractFolder=$Application"SetupExtract"
+ApplicationSetupTempFolder=$Application"SetUpTemp"
+ApplicationDesktopFile=$Application".desktop"
+ApplicationURL="https://download.mozilla.org/?product=firefox-latest&os=linux&lang=en-US"
+PathToTemporaryFolder="/tmp"
+PathToApplicationSetupTempFolder=$PathToTemporaryFolder"/"$ApplicationSetupTempFolder
+PathToInstallationFolder="/opt"
+PathToApplicationDesktopFile="/usr/share/applications"
+PathToApplicationBinary=$PathToInstallationFolder"/firefox/"$ApplicationBinary
+PathToApplicationSymLink="/usr/lib/"$Application
+
+exitcode=100
+
+FailedSymbol="["${txtred}"X"${txtrst}"]"
+FolderNotFound=" folder was not found "
+InfoSymbol="[i]"
+CreatingFolder="Creating folder "
+OkSymbol="[OK]"
+UFolder="Folder "
+SuccefullyCreated="successfully created"
+FailledCreatingFolder="Failled creating folder "
+Folder=" folder "
+FolderFound=" folder found "
+ChangingPath="Changing path to "
+SriptRunningFolder="Sript running folder is "
+SearchingFolder="Searching for folder "
+UFolder="Folder "
+IsEmpty=" is empty"
+IsNotEmpty=" is not empty"
+DeletingFiles="Deleting files in "
+NoticeSymbol="[${txtylw}!${txtrst}]"
+Downloading="Downloading "
+UnZipping="Unzipping "
+CreatingFolder="Creating folder "
+Coping="Coping to "
+WrongPath="Wrong path..."
+TerminatingScript="Terminating script ..."
+WGETerror="wget error...exit code is"
+MKDIRerror="mkdir command error...exit code is"
+TARerror="tar command error...exit code is"
+CPerror="copy command error...exit code is"
+Creating="Creating"
+SymLink="Symlink "
+ChangingPermissions="Changing Permissions "
+Deleting="Deleting "
+Searching="Searching for "
+FilesCopied="Files Copied"
+FilesDeleted="Files deleted"
+FilesExtracted="Files extracted"
+RMerror="Delete command error...exit code is "
+FindDir(){
+	local SeekingName=$1
+		
+	if [ "$(find . -maxdepth 1 -type d -name $SeekingName)" ]; then
+		echo 1
+	else
+		echo 0
+	fi
+}
+
+ScriptCheckRootDir(){
+
+	if [ $(FindDir $1) -eq 0 ];then
+		echo $FailedSymbol $1 $FolderNotFound
+		echo $InfoSymbol $CreatingFolder $1
+		mkdir $1
+		if [ $(FindDir $1) -eq 1 ];then
+			echo $OkSymbol $UFolder $1  $SuccefullyCreated
+		else
+			echo $FailedSymbol $FailledCreatingFolder $1
+		fi
+	else
+		echo $OkSymbol $1 $Folder $FolderFound
+	
+	fi
+}
+
+CreateDesktopFile(){
+cat <<EOF > $1 #PathToApplicationDesktopFile"/"$ApplicationDesktopFile
+[Desktop Entry]
+Version=1.0
+Name=Firefox Quantum
+GenericName=Web Browser
+Exec=/usr/lib/QuantumFirefox %u
+Icon=/opt/firefox/browser/chrome/icons/default/default64.png
+Terminal=false
+Type=Application
+MimeType=text/html;text/xml;application/xhtml+xml;application/vnd.mozilla.xul+xml;text/mml;x-scheme-handler/http;x-scheme-handler/https;
+StartupNotify=true
+Categories=Network;WebBrowser;
+Keywords=web;browser;internet;
+Actions=new-window;new-private-window;
+[Desktop Action new-window]
+Name=New Window
+Exec=/usr/lib/QuantumFirefox --new-window %u
+[Desktop Action new-private-window]
+Name=New Private Window
+Exec=/usr/lib/QuantumFirefox --private-window %u
+EOF
+
+}
+
+
+echo $Application
+echo $ApplicationZip
+echo $ApplicationZipExtractFolder
+echo $ApplicationSetupTempFolder
+echo $PathToTemporaryFolder
+echo $PathToInstallationFolder
+
+
+echo $InfoSymbol $SriptRunningFolder $(pwd)
+echo $InfoSymbol $ChangingPath $PathToTemporaryFolder $Folder
+cd $PathToTemporaryFolder
+echo $InfoSymbol $SriptRunningFolder $(pwd)
+echo $InfoSymbol $SearchingFolder $ApplicationSetupTempFolder $Folder
+ScriptCheckRootDir $ApplicationSetupTempFolder
+
+echo $InfoSymbol $ChangingPath $PathToTemporaryFolder"/"$ApplicationSetupTempFolder $Folder
+cd $ApplicationSetupTempFolder
+echo $InfoSymbol $SriptRunningFolder $(pwd)
+
+
+if [ -n "$(find . -maxdepth 0 -type d -empty 2>/dev/null)" ]; then
+  	echo $InfoSymbol $UFolder $ApplicationSetupTempFolder $IsEmpty
+else
+	echo $InfoSymbol $UFolder $ApplicationSetupTempFolder $IsNotEmpty
+	
+	if [ $PathToApplicationSetupTempFolder = $(pwd) ];then
+		echo $NoticeSymbol $DeletingFiles $(pwd)
+		rm -r *
+		exitcode=$?
+		if [ $exitcode -ne 0 ];then
+			echo $NoticeSymbol $RMerror $exitcode
+			echo $NoticeSymbol $TerminatingScript
+			exit
+		else
+			echo $OkSymbol $FilesDeleted
+		fi
+	else
+		echo $NoticeSymbol $WrongPath "["$(pwd)"] instead of ["$PathToApplicationSetupTempFolder"]"
+		echo $NoticeSymbol $TerminatingScript
+		exit
+	fi
+fi
+
+
+echo $InfoSymbol $Downloading $Application
+wget -O $ApplicationZip $ApplicationURL
+exitcode=$?
+#exitcode=0
+if [ $exitcode -eq 0 ];then
+	echo $InfoSymbol $CreatingFolder $ApplicationZipExtractFolder
+	mkdir $ApplicationZipExtractFolder
+	exitcode=$?
+	#exitcode=0
+	if [ $exitcode -eq 0 ];then
+		echo $InfoSymbol $UnZipping $ApplicationZip
+		tar -xvf $ApplicationZip -C $ApplicationZipExtractFolder
+		exitcode=$?
+		#exitcode=0
+		if [ $exitcode -ne 0 ];then
+			echo $NoticeSymbol $TARerror $exitcode
+			echo $NoticeSymbol $TerminatingScript
+			exit
+		else
+			echo $OkSymbol $FilesExtracted
+		fi
+
+	else
+		echo $NoticeSymbol $MKDIRerror $exitcode
+		echo $NoticeSymbol $TerminatingScript
+		exit
+	fi
+
+else
+	echo $NoticeSymbol $WGETerror $exitcode
+	echo $NoticeSymbol $TerminatingScript
+	exit
+fi
+
+
+echo $InfoSymbol $ChangingPath $ApplicationZipExtractFolder $Folder
+cd $ApplicationZipExtractFolder
+echo $InfoSymbol $SriptRunningFolder $(pwd)
+
+echo $InfoSymbol $Coping $PathToInstallationFolder
+cp -r * $PathToInstallationFolder
+exitcode=$?
+#exicode=0
+if [ $exitcode -ne 0 ];then
+	echo $NoticeSymbol $CPerror $exitcode
+	echo $NoticeSymbol $TerminatingScript
+	exit
+else
+	echo $OkSymbol $FilesCopied
+fi
+
+if [ ! -f $PathToApplicationDesktopFile"/"$ApplicationDesktopFile ];then
+	echo $InfoSymbol $Creating $ApplicationDesktopFile
+	CreateDesktopFile $PathToApplicationDesktopFile"/"$ApplicationDesktopFile
+	echo $InfoSymbol $ChangingPermissions $ApplicationDesktopFile
+	chmod +x $PathToApplicationDesktopFile"/"$ApplicationDesktopFile
+	
+else
+	echo $NoticeSymbol $Deleting $ApplicationDesktopFile
+	rm $PathToApplicationDesktopFile"/"$ApplicationDesktopFile
+	echo $InfoSymbol $Creating $ApplicationDesktopFile
+	CreateDesktopFile $PathToApplicationDesktopFile"/"$ApplicationDesktopFile
+	echo $InfoSymbol $ChangingPermissions $ApplicationDesktopFile
+	chmod +x $PathToApplicationDesktopFile"/"$ApplicationDesktopFile
+	
+fi
+
+echo $InfoSymbol $Searching $SymLink $PathToApplicationSymLink
+
+if [ -L ${PathToApplicationSymLink} ] ; then
+	if [ -e ${PathToApplicationSymLink} ] ; then
+		echo $OkSymbol $SymLink $PathToApplicationSymLink "is OK"
+			
+	else
+		echo $NoticeSymbol $SymLink $PathToApplicationSymLink  "Broken"
+		echo $InfoSymbol $Deleting $SymLink $PathToApplicationSymLink
+		rm $PathToApplicationSymLink
+	fi
+elif [ -e ${PathToApplicationSymLink} ] ; then
+	echo "Not a link"
+else
+	echo $NoticeSymbol $SymLink $PathToApplicationSymLink "Missing"
+	echo $InfoSymbol $Creating $SymLink  $PathToApplicationBinary "==>" $PathToApplicationSymLink
+	ln -s $PathToApplicationBinary $PathToApplicationSymLink
+fi
+	
